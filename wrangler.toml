@@ -10,7 +10,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "boba-stamp"
-database_id = "1e97d236-2701-4573-b43e-9c7a85e6336c"
+database_id = "41a11cae-682b-474b-9ec5-60e89242d0d4"
 migrations_dir = "worker/migrations"
 
 [vars]
