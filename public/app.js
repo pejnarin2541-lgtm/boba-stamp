@@ -1,5 +1,5 @@
 const $ = selector => document.querySelector(selector);
-const state = { role:'customer', session:null, shops:[], member:null, merchant:null, admin:null, purpose:'register', challenge:null, qrUntil:0, scanner:null };
+const state = { role:'customer', session:null, shops:[], member:null, merchant:null, admin:null, purpose:'register', challenge:null, qrUntil:0, scanner:null, turnstileSiteKey:'', turnstileWidget:null };
 function node(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=String(text);return x;}
 function clear(x){x.replaceChildren();}
 function notice(target,message){target.textContent=message||'';target.hidden=!message;}
@@ -39,9 +39,16 @@ function setPurpose(purpose){
   $('#customer-form').elements.name.required=purpose==='register';
   $('#customer-form').elements.email.required=purpose==='register';
   $('#customer-form-title').textContent=purpose==='register'?'สมัครสมาชิก':'เข้าสู่ระบบ';
-  $('#send-code').textContent=purpose==='register'?'ส่งรหัสยืนยัน':'รับรหัสเข้าบัตร';
+  $('.auth-card .muted').textContent=purpose==='register'?'เลือกสาขาและกรอกข้อมูลเพื่อรับรหัสยืนยันทางอีเมล':'กรอกเบอร์โทร แล้วยืนยันว่าไม่ใช่บอตเพื่อเปิดบัตรสมาชิก';
+  $('#turnstile-box').hidden=purpose!=='login';
+  $('#send-code').textContent=purpose==='register'?'ส่งรหัสยืนยัน':'เข้าสู่ระบบ';
   $('#customer-form-fields').hidden=false;$('#verify-form').hidden=true;
   notice($('#customer-message'),'');
+}
+async function setupTurnstile(){
+  const cfg=await request('/api/config');state.turnstileSiteKey=cfg.turnstileSiteKey||'';
+  if(!state.turnstileSiteKey||!window.turnstile)return;
+  state.turnstileWidget=window.turnstile.render('#turnstile-widget',{sitekey:state.turnstileSiteKey,theme:'light'});
 }
 function fillShops(){
   const select=$('#customer-shop');clear(select);
@@ -61,7 +68,7 @@ function renderEvents(target,events){
   }
 }
 async function loadMember(){
-  state.member=await request('/api/member');const {member:m,shop:s,events}=state.member;
+  state.member=await request('/api/member');const {member:m,shop:s,events,promotions=[]}=state.member;
   $('#member-greeting').textContent='สวัสดี '+m.name;
   $('#member-shop-name').textContent=s.name+(s.branch&&s.branch!=='-'?' · '+s.branch:'');
   $('#member-code').textContent=m.id;$('#member-card-title').textContent=s.card_title;
@@ -71,6 +78,7 @@ async function loadMember(){
   const stamps=$('#stamp-grid');clear(stamps);
   for(let i=0;i<10;i++)stamps.append(node('span','stamp '+(i<m.stamps?'filled':''),i<m.stamps?'●':String(i+1)));
   renderEvents($('#member-events'),events);
+  const promoBox=$('#member-promotions');clear(promoBox);if(!promotions.length)promoBox.append(node('p','empty','ยังไม่มีโปรโมชัน'));for(const p of promotions){const row=node('div','event-row');row.append(node('span','event-icon redeem','★'));const text=node('div');text.append(node('strong','',p.title),node('small','',p.description||p.reward_text||''));row.append(text);promoBox.append(row);}
 }
 function stat(label,value){const card=node('article','stat');card.append(node('strong','',value),node('span','',label));return card;}
 function memberTile(m,admin=false){
@@ -120,6 +128,9 @@ async function loadAdmin(){
   const target=$('#admin-member-list');clear(target);
   if(!members.length)target.append(node('p','empty','ยังไม่มีสมาชิก'));
   for(const m of members)target.append(memberTile(m,true));
+  for(const id of ['admin-member-shop','promotion-shop']){const select=$('#'+id);clear(select);for(const s of shops){const o=node('option','',s.name+(s.branch&&s.branch!=='-'?' · '+s.branch:''));o.value=s.id;select.append(o);}}
+  $('#admin-ip').textContent='IP เครื่องที่เปิดแอดมิน: '+(state.admin.requestIp||'ไม่ทราบ');
+  const promotions=state.admin.promotions||[], promoTarget=$('#admin-promotion-list');clear(promoTarget);if(!promotions.length)promoTarget.append(node('p','empty','ยังไม่มีโปรโมชัน'));for(const p of promotions){const row=node('article','member-item'),info=node('div','member-info');info.append(node('strong','',p.title),node('small','',p.shop_name+' · '+(p.description||p.reward_text||'')));const del=node('button','button tiny ghost-danger','ลบ');del.type='button';del.onclick=()=>action(async()=>{if(!confirm('ลบโปรโมชันนี้?'))return;await request('/api/admin/promotions/'+encodeURIComponent(p.id),'DELETE');await loadAdmin();});row.append(info,del);promoTarget.append(row);}
 }
 function editShop(s){
   const form=$('#shop-form');form.reset();form.elements.id.value=s?.id||'';
@@ -141,6 +152,11 @@ $('#choose-login').addEventListener('click',()=>setPurpose('login'));
 $('#back-to-form').addEventListener('click',()=>setPurpose(state.purpose));
 $('#customer-form').addEventListener('submit',e=>{e.preventDefault();action(async()=>{
   notice($('#customer-message'),'');const f=e.currentTarget.elements;
+  if(state.purpose==='login'){
+    if(!state.turnstileSiteKey||state.turnstileWidget===null)throw new Error('ยังไม่ได้ตั้งค่า CAPTCHA');
+    const turnstileToken=window.turnstile.getResponse(state.turnstileWidget);if(!turnstileToken)throw new Error('กรุณาติ๊กฉันไม่ใช่บอต');
+    await request('/api/customer/login-phone','POST',{shopId:f.shopId.value,phone:f.phone.value,turnstileToken});state.session='member';sessionPanels();await loadMember();toast('เข้าสู่บัตรสมาชิกแล้ว');return;
+  }
   const input={purpose:state.purpose,shopId:f.shopId.value,name:f.name.value,phone:f.phone.value,email:f.email.value};
   const result=await request('/api/customer/request-code','POST',input);state.challenge=result.challengeId;
   $('#customer-form-fields').hidden=true;$('#verify-form').hidden=false;
@@ -159,6 +175,8 @@ $('#shop-filter').addEventListener('input',()=>renderShops($('#shop-filter').val
 $('#add-shop-open').addEventListener('click',()=>editShop(null));
 $('#shop-form').addEventListener('submit',e=>{e.preventDefault();action(async()=>{const f=e.currentTarget.elements,id=f.id.value,body={name:f.name.value,branch:f.branch.value,owner:f.owner.value,phone:f.phone.value,plan:f.plan.value,status:f.status.value,prefix:f.prefix.value};if(f.pin.value)body.pin=f.pin.value;if(id)await request('/api/admin/shops/'+encodeURIComponent(id),'PATCH',body);else await request('/api/admin/shops','POST',body);$('#edit-dialog').close();await loadAdmin();toast('บันทึกร้านแล้ว');});});
 $('#delete-shop').addEventListener('click',()=>action(async()=>{const id=$('#shop-form').elements.id.value;if(!confirm('ลบร้านนี้ถาวร?'))return;await request('/api/admin/shops/'+encodeURIComponent(id),'DELETE');$('#edit-dialog').close();await loadAdmin();toast('ลบร้านแล้ว');}));
+$('#admin-member-add').addEventListener('submit',e=>{e.preventDefault();action(async()=>{const f=e.currentTarget.elements;await request('/api/admin/shops/'+encodeURIComponent(f.shopId.value)+'/members','POST',{name:f.name.value,phone:f.phone.value,email:f.email.value});e.currentTarget.reset();await loadAdmin();toast('เพิ่มสมาชิกแล้ว');});});
+$('#promotion-form').addEventListener('submit',e=>{e.preventDefault();action(async()=>{const f=e.currentTarget.elements;await request('/api/admin/shops/'+encodeURIComponent(f.shopId.value)+'/promotions','POST',{title:f.title.value,description:f.description.value,reward:f.reward.value});e.currentTarget.reset();await loadAdmin();toast('สร้างโปรโมชันแล้ว');});});
 $('#show-qr').addEventListener('click',()=>action(async()=>{await newQr();$('#qr-dialog').showModal();}));
 $('#qr-refresh').addEventListener('click',()=>action(newQr));
 async function newQr(){const result=await request('/api/member/qr','POST'),box=$('#qr-image');clear(box);const content=state.member.member.id+'|'+result.token;state.qrUntil=Date.now()+result.expiresIn*1000;
@@ -170,4 +188,4 @@ setInterval(()=>{if(!$('#qr-dialog').open)return;const left=Math.max(0,Math.ceil
 async function stopScanner(){const s=state.scanner;if(s){s.getTracks().forEach(t=>t.stop());state.scanner=null;}}
 $('#scan-dialog').addEventListener('close',stopScanner);
 $('#scan-open').addEventListener('click',()=>action(async()=>{if(!('BarcodeDetector' in window)||!navigator.mediaDevices?.getUserMedia)throw new Error('เบราว์เซอร์นี้ยังสแกน QR ไม่ได้ กรุณาค้นหาสมาชิกด้วยเบอร์');const detector=new BarcodeDetector({formats:['qr_code']});$('#scan-dialog').showModal();state.scanner=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});const video=$('#scanner-video');video.srcObject=state.scanner;await video.play();$('#scan-status').textContent='วาง QR ของลูกค้าในกรอบกล้อง';while(state.scanner&&$('#scan-dialog').open){const codes=await detector.detect(video);if(codes.length){const [id,token]=codes[0].rawValue.split('|');await request('/api/merchant/stamp','POST',{memberId:id,qrToken:token});$('#scan-dialog').close();await loadMerchant();toast('สแกนและเพิ่ม 1 แต้มสำเร็จ');break;}await new Promise(r=>setTimeout(r,250));}}));
-action(async()=>{const s=await request('/api/shops');state.shops=s.shops;fillShops();setPurpose('register');await refresh();});
+action(async()=>{const s=await request('/api/shops');state.shops=s.shops;fillShops();setPurpose('register');await setupTurnstile();await refresh();});

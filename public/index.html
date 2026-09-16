@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Kanit:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -46,6 +47,7 @@
               <label id="name-field">ชื่อของคุณ <input name="name" autocomplete="name" maxlength="100" placeholder="ชื่อที่ร้านใช้เรียก" required></label>
               <label>เบอร์โทรศัพท์ <input name="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0812345678" required></label>
               <label id="email-field">อีเมลรับรหัส <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+              <div id="turnstile-box" class="turnstile-box" hidden><div id="turnstile-widget"></div></div>
               <button class="button primary full" type="submit" id="send-code">ส่งรหัสยืนยัน</button>
             </form>
           </div>
@@ -73,7 +75,7 @@
             </article>
             <div class="surface action-panel"><div><h2>ให้ร้านเพิ่มแต้ม</h2><p class="muted">แสดง QR นี้ที่เคาน์เตอร์ หรือแจ้งเบอร์โทรที่สมัคร</p></div><button class="button primary" id="show-qr" type="button">แสดง QR</button></div>
           </div>
-          <aside class="surface history-panel"><span class="eyebrow">กิจกรรมล่าสุด</span><h2>ประวัติของฉัน</h2><div id="member-events" class="event-list"></div></aside>
+          <aside class="surface history-panel"><span class="eyebrow">กิจกรรมล่าสุด</span><h2>ประวัติของฉัน</h2><div id="member-events" class="event-list"></div><div class="member-promotions"><span class="eyebrow">ข้อเสนอพิเศษ</span><div id="member-promotions" class="event-list"></div></div></aside>
         </div>
       </div>
     </section>
@@ -107,8 +109,9 @@
       <div id="admin-space" hidden>
         <div class="section-head"><div><span class="eyebrow">ภาพรวม</span><h1>จัดการร้านค้าและสมาชิก</h1><p class="muted">อนุมัติร้าน ดูสมาชิก และจัดการสถานะ</p></div><button class="button primary" type="button" id="add-shop-open">+ เพิ่มร้าน</button></div>
         <div class="stats" id="admin-stats"></div>
+        <div class="surface admin-tools"><div class="panel-title"><div><span class="eyebrow">จัดการด่วน</span><h2>เพิ่มสมาชิก / โปรโมชัน</h2></div><small id="admin-ip" class="muted"></small></div><div class="two-cols"><form id="admin-member-add"><h3>เพิ่มสมาชิกให้ร้าน</h3><label>ร้าน <select name="shopId" id="admin-member-shop" required></select></label><label>ชื่อ <input name="name" required></label><label>เบอร์โทร <input name="phone" inputmode="numeric" required></label><label>อีเมล <input name="email" type="email" required></label><button class="button primary full">เพิ่มสมาชิก</button></form><form id="promotion-form"><h3>สร้างโปรโมชัน</h3><label>ร้าน <select name="shopId" id="promotion-shop" required></select></label><label>ชื่อโปรโมชัน <input name="title" required placeholder="เช่น ซื้อ 2 แถม 1"></label><label>รายละเอียด <textarea name="description" rows="2"></textarea></label><label>ของรางวัล/เงื่อนไข <input name="reward"></label><button class="button secondary full">บันทึกโปรโมชัน</button></form></div></div>
         <div class="surface"><div class="panel-title"><div><span class="eyebrow">ร้านค้า</span><h2>ทุกร้าน</h2></div><input id="shop-filter" class="filter-input" placeholder="ค้นหาร้านหรือเบอร์"></div><div id="admin-shop-list" class="shop-list"></div></div>
-        <div class="surface admin-members"><span class="eyebrow">สมาชิก</span><h2>สมาชิกทั้งหมด</h2><div id="admin-member-list" class="member-list"></div></div>
+        <div class="surface admin-members"><span class="eyebrow">สมาชิก</span><h2>สมาชิกทั้งหมด</h2><div id="admin-member-list" class="member-list"></div></div><div class="surface admin-members"><span class="eyebrow">โปรโมชัน</span><h2>โปรโมชันแต่ละร้าน</h2><div id="admin-promotion-list" class="member-list"></div></div>
       </div>
     </section>
   </main>
