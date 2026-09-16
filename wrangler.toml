@@ -15,4 +15,4 @@ migrations_dir = "worker/migrations"
 
 [vars]
 # Set ADMIN_PIN in the Cloudflare dashboard as a secret before the first deploy.
-DEV_OTP = "1"
+DEV_OTP = "0"
