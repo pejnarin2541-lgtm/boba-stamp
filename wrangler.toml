@@ -1,0 +1,18 @@
+name = "boba-stamp"
+main = "worker/index.js"
+compatibility_date = "2026-09-16"
+workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "boba-stamp"
+database_id = "41a11cae-682b-474b-9ec5-60e89242d0d4"
+migrations_dir = "worker/migrations"
+
+[vars]
+# Set ADMIN_PIN in the Cloudflare dashboard as a secret before the first deploy.
+DEV_OTP = "1"

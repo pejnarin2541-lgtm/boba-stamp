@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1d3632">
+  <meta name="description" content="บัตรสะสมแต้มสำหรับลูกค้าและร้านค้า จัดการสมาชิก แต้ม และรางวัลในที่เดียว">
+  <title>Boba Stamp — บัตรสะสมแต้ม</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Kanit:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Boba Stamp หน้าหลัก"><span class="brand-icon" aria-hidden="true">●<i>●</i></span><span>BOBA <b>STAMP</b></span></a>
+    <nav class="role-nav" aria-label="เลือกหน้าการใช้งาน">
+      <button type="button" data-role="customer" class="selected">ลูกค้า</button>
+      <button type="button" data-role="merchant">ร้านค้า</button>
+      <button type="button" data-role="admin">ผู้ดูแล</button>
+    </nav>
+    <button id="logout" class="logout" type="button" hidden>ออกจากระบบ</button>
+  </header>
+  <main>
+    <section id="customer-view" class="role-view">
+      <div id="customer-auth" class="entry-grid">
+        <div class="entry-copy">
+          <span class="eyebrow">บัตรสะสมแต้มดิจิทัล</span>
+          <h1>แก้วโปรดของคุณ<br><em>ใกล้ขึ้นอีกแต้ม</em></h1>
+          <p>สมัครสมาชิกหรือเข้าสู่ระบบเพื่อดูแต้มและประวัติการแลกรางวัลของร้านที่คุณชอบ</p>
+          <div class="entry-art"><img src="/boba-photo.png" alt="ชานมไข่มุกในแก้วใส" loading="lazy"></div>
+        </div>
+        <div class="surface auth-card">
+          <div class="segmented" aria-label="เลือกรูปแบบการเข้าใช้">
+            <button type="button" id="choose-register" class="selected">สมัครสมาชิก</button>
+            <button type="button" id="choose-login">เข้าสู่ระบบ</button>
+          </div>
+          <div id="customer-form-fields">
+            <h2 id="customer-form-title">สมัครสมาชิก</h2>
+            <p class="muted">เลือกสาขาและกรอกข้อมูลเพื่อรับรหัสยืนยันทางอีเมล</p>
+            <form id="customer-form">
+              <label>ร้านที่สมัคร <select name="shopId" id="customer-shop" required></select></label>
+              <label id="name-field">ชื่อของคุณ <input name="name" autocomplete="name" maxlength="100" placeholder="ชื่อที่ร้านใช้เรียก" required></label>
+              <label>เบอร์โทรศัพท์ <input name="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0812345678" required></label>
+              <label id="email-field">อีเมลรับรหัส <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+              <button class="button primary full" type="submit" id="send-code">ส่งรหัสยืนยัน</button>
+            </form>
+          </div>
+          <form id="verify-form" hidden>
+            <button class="text-button" id="back-to-form" type="button">← แก้ไขข้อมูล</button>
+            <h2>ยืนยันอีเมล</h2>
+            <p class="muted" id="code-sent-line"></p>
+            <div class="dev-code" id="dev-code" hidden></div>
+            <label>รหัส 6 หลัก <input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required autofocus></label>
+            <button class="button primary full" type="submit">ยืนยันและเปิดบัตร</button>
+          </form>
+          <p class="form-message" id="customer-message" role="alert" hidden></p>
+        </div>
+      </div>
+      <div id="member-space" hidden>
+        <div class="section-head"><div><span class="eyebrow">บัตรของฉัน</span><h1 id="member-greeting"></h1><p id="member-shop-name" class="muted"></p></div><span class="live-chip">ข้อมูลอัปเดตจากร้าน</span></div>
+        <div class="member-grid">
+          <div>
+            <article class="loyalty-card">
+              <div class="card-top"><span>BOBA STAMP</span><span id="member-code"></span></div>
+              <h2 id="member-card-title"></h2><p id="member-card-note"></p>
+              <div class="points-line"><strong id="member-points">0</strong><span>จาก 10 แต้ม</span></div>
+              <div id="stamp-grid" class="stamps" aria-label="แต้มสะสม"></div>
+              <div class="card-bottom"><span id="member-reward"></span><span>10 แต้ม = 1 รางวัล</span></div>
+            </article>
+            <div class="surface action-panel"><div><h2>ให้ร้านเพิ่มแต้ม</h2><p class="muted">แสดง QR นี้ที่เคาน์เตอร์ หรือแจ้งเบอร์โทรที่สมัคร</p></div><button class="button primary" id="show-qr" type="button">แสดง QR</button></div>
+          </div>
+          <aside class="surface history-panel"><span class="eyebrow">กิจกรรมล่าสุด</span><h2>ประวัติของฉัน</h2><div id="member-events" class="event-list"></div></aside>
+        </div>
+      </div>
+    </section>
+    <section id="merchant-view" class="role-view" hidden>
+      <div id="merchant-auth" class="auth-narrow surface">
+        <span class="eyebrow">สำหรับร้านค้า</span><h1>จัดการแต้มหน้าร้าน</h1><p class="muted">ใช้เบอร์ร้านและ PIN ที่ผู้ดูแลกำหนด</p>
+        <form id="merchant-login"><label>เบอร์โทรร้าน <input name="phone" type="tel" inputmode="numeric" autocomplete="username" placeholder="0812345678" required></label><label>PIN ร้าน <input name="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••" required></label><button class="button primary full">เข้าสู่ระบบร้าน</button></form>
+        <p class="form-message" id="merchant-login-message" role="alert" hidden></p>
+      </div>
+      <div id="merchant-space" hidden>
+        <div class="section-head"><div><span class="eyebrow">หน้าร้าน</span><h1 id="merchant-title"></h1><p class="muted">ค้นหาสมาชิก เพิ่มแต้ม และยืนยันการแลกรางวัล</p></div><span class="live-chip">ร้านเปิดใช้งาน</span></div>
+        <div id="merchant-stats" class="stats"></div>
+        <div class="workspace-grid">
+          <section class="surface">
+            <div class="panel-title"><div><span class="eyebrow">จัดการแต้ม</span><h2>ค้นหาลูกค้า</h2></div><button class="button secondary" id="scan-open" type="button">สแกน QR</button></div>
+            <form id="member-search" class="search-form"><label class="sr-only" for="member-query">เบอร์หรือรหัสสมาชิก</label><input id="member-query" name="query" placeholder="เบอร์โทร หรือรหัสสมาชิก" required><button class="button primary">ค้นหา</button></form>
+            <p class="muted small">เลือกสมาชิกจากรายการด้านล่าง หรือค้นหาด้วยเบอร์โทร</p>
+            <div id="merchant-member-list" class="member-list"></div>
+          </section>
+          <div class="stack">
+            <section class="surface"><span class="eyebrow">บัตรร้าน</span><h2>ตกแต่งบัตรสมาชิก</h2>
+              <form id="theme-form"><label>สีหลัก <input type="color" name="primary"></label><label>หัวข้อบนบัตร <input name="title" maxlength="60"></label><label>คำอธิบาย <textarea name="note" rows="2" maxlength="140"></textarea></label><label>ข้อความรางวัล <input name="reward" maxlength="100"></label><label>คำนำหน้ารหัสสมาชิกใหม่ <input name="prefix" maxlength="20" placeholder="BOBA"></label><button class="button secondary">บันทึกบัตร</button></form>
+            </section>
+            <section class="surface"><span class="eyebrow">รายการล่าสุด</span><h2>กิจกรรมร้าน</h2><div id="merchant-events" class="event-list"></div></section>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="admin-view" class="role-view" hidden>
+      <div id="admin-auth" class="auth-narrow surface"><span class="eyebrow">ผู้ดูแลระบบ</span><h1>ภาพรวมร้านค้า</h1><p class="muted">กรอก PIN ผู้ดูแลเพื่อเข้าถึงข้อมูล</p><form id="admin-login"><label>PIN ผู้ดูแล <input name="pin" type="password" inputmode="numeric" autocomplete="current-password" required></label><button class="button primary full">เข้าสู่ระบบ</button></form><p class="form-message" id="admin-login-message" role="alert" hidden></p></div>
+      <div id="admin-space" hidden>
+        <div class="section-head"><div><span class="eyebrow">ภาพรวม</span><h1>จัดการร้านค้าและสมาชิก</h1><p class="muted">อนุมัติร้าน ดูสมาชิก และจัดการสถานะ</p></div><button class="button primary" type="button" id="add-shop-open">+ เพิ่มร้าน</button></div>
+        <div class="stats" id="admin-stats"></div>
+        <div class="surface"><div class="panel-title"><div><span class="eyebrow">ร้านค้า</span><h2>ทุกร้าน</h2></div><input id="shop-filter" class="filter-input" placeholder="ค้นหาร้านหรือเบอร์"></div><div id="admin-shop-list" class="shop-list"></div></div>
+        <div class="surface admin-members"><span class="eyebrow">สมาชิก</span><h2>สมาชิกทั้งหมด</h2><div id="admin-member-list" class="member-list"></div></div>
+      </div>
+    </section>
+  </main>
+  <footer><span>BOBA STAMP</span><span>บัตรเดียว ทุกแต้มมีความหมาย</span></footer>
+  <dialog id="qr-dialog" class="dialog"><form method="dialog"><button class="dialog-close" aria-label="ปิด" type="submit">×</button></form><span class="eyebrow">QR สมาชิก</span><h2>ให้ร้านสแกน</h2><p class="muted">รหัสมีอายุ 60 วินาที ใช้เพิ่มแต้มได้ครั้งเดียว</p><div id="qr-image"></div><p id="qr-timer" class="qr-timer"></p><button id="qr-refresh" class="button secondary full" type="button">สร้าง QR ใหม่</button></dialog>
+  <dialog id="scan-dialog" class="dialog"><form method="dialog"><button class="dialog-close" aria-label="ปิด" type="submit">×</button></form><span class="eyebrow">สแกน QR</span><h2>เพิ่มแต้มจากบัตร</h2><video id="scanner-video" playsinline muted></video><p class="muted" id="scan-status">กำลังเปิดกล้อง…</p></dialog>
+  <dialog id="edit-dialog" class="dialog wide"><form method="dialog"><button class="dialog-close" aria-label="ปิด" type="submit">×</button></form><span class="eyebrow" id="edit-eyebrow">ร้านค้า</span><h2 id="edit-title">ข้อมูลร้าน</h2><form id="shop-form"><input name="id" type="hidden"><div class="two-cols"><label>ชื่อร้าน <input name="name" required></label><label>สาขา <input name="branch"></label></div><div class="two-cols"><label>ชื่อเจ้าของ <input name="owner"></label><label>เบอร์โทรร้าน <input name="phone" type="tel" required></label></div><div class="two-cols"><label>PIN ร้าน <input name="pin" type="password" inputmode="numeric" placeholder="เว้นว่างเพื่อใช้รหัสเดิม"></label><label>แพ็กเกจ <select name="plan"><option>Trial</option><option>Standard</option><option>Premium</option></select></label></div><div class="two-cols"><label>สถานะ <select name="status"><option value="pending">รออนุมัติ</option><option value="active">เปิดใช้งาน</option><option value="banned">ระงับ</option></select></label><label>คำนำหน้ารหัสสมาชิก <input name="prefix" maxlength="20" placeholder="BOBA"></label></div><button class="button primary full">บันทึกร้าน</button></form><button class="text-button danger-text" id="delete-shop" type="button" hidden>ลบร้านที่ยังไม่มีสมาชิก</button></dialog>
+  <div id="toast" role="status" aria-live="polite" class="toast" hidden></div>
+</body>
+</html>
